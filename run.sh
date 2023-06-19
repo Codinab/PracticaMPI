@@ -4,4 +4,4 @@ bash build.sh
 
 ulimit -s 20000
 
-./conway
+mpirun -np 1 ./conway

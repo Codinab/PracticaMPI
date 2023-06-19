@@ -99,6 +99,14 @@ CMakeFiles/conway.dir/main.c.o
  /usr/include/x86_64-linux-gnu/bits/types/FILE.h
  /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h
  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h
+ /usr/include/x86_64-linux-gnu/mpich/mpi.h
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h
+ /usr/include/stdint.h
+ /usr/include/x86_64-linux-gnu/bits/wchar.h
+ /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h
+ /usr/include/x86_64-linux-gnu/mpich/mpi_proto.h
+ /usr/include/x86_64-linux-gnu/mpich/mpio.h
+ /usr/include/x86_64-linux-gnu/mpich/mpi.h
  /home/alex/Documentos/Uni/CDA/gol_nosdl/game.h
  /home/alex/Documentos/Uni/CDA/gol_nosdl/logic.h
  /home/alex/Documentos/Uni/CDA/gol_nosdl/render.h

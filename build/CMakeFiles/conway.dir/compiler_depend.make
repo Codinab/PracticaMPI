@@ -97,6 +97,14 @@ CMakeFiles/conway.dir/main.c.o: ../main.c \
   /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/mpich/mpi.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h \
+  /usr/include/stdint.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/mpich/mpi_proto.h \
+  /usr/include/x86_64-linux-gnu/mpich/mpio.h \
+  /usr/include/x86_64-linux-gnu/mpich/mpi.h \
   ../game.h \
   ../logic.h \
   ../render.h
@@ -110,6 +118,18 @@ CMakeFiles/conway.dir/render.c.o: ../render.c \
 
 
 ../render.c:
+
+/usr/include/x86_64-linux-gnu/mpich/mpio.h:
+
+/usr/include/x86_64-linux-gnu/mpich/mpi_proto.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
+
+/usr/include/x86_64-linux-gnu/bits/wchar.h:
+
+/usr/include/stdint.h:
+
+/usr/include/x86_64-linux-gnu/mpich/mpi.h:
 
 /usr/include/strings.h:
 
@@ -178,6 +198,8 @@ CMakeFiles/conway.dir/render.c.o: ../render.c \
 /usr/include/x86_64-linux-gnu/sys/cdefs.h:
 
 ../render.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
 
