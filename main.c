@@ -16,7 +16,7 @@ void free_neighbors(int col_num, unsigned char **neighbors);
 void init_neighbors(int col_num, int row_num, unsigned char **neighbors);
 
 
-void parse_arguments(int argc, char **argv, char *input_file, char *output_file, bool *LoadFile, bool *SaveFile,
+void parse_arguments(int rank, int argc, char **argv, char *input_file, char *output_file, bool *LoadFile, bool *SaveFile,
                      bool *PrintBoard, int *iterations, int *col_num, int *row_num);
 
 void create_board(int col_num, int row_num, board_t *board);
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     int row_num = D_ROW_NUM;
 
     // Command line options.
-    parse_arguments(argc, argv, input_file, output_file, &LoadFile, &SaveFile, &PrintBoard, &iterations, &col_num,
+    parse_arguments(rank, argc, argv, input_file, output_file, &LoadFile, &SaveFile, &PrintBoard, &iterations, &col_num,
                     &row_num);
 
     if (size > row_num) {
@@ -219,7 +219,7 @@ void create_board(int col_num, int row_num, board_t *board) {
     init_board(board);
 }
 
-void parse_arguments(int argc, char **argv, char *input_file, char *output_file, bool *LoadFile, bool *SaveFile,
+void parse_arguments(int rank, int argc, char **argv, char *input_file, char *output_file, bool *LoadFile, bool *SaveFile,
                      bool *PrintBoard,
                      int *iterations, int *col_num, int *row_num) {
     int opt;
@@ -232,21 +232,21 @@ void parse_arguments(int argc, char **argv, char *input_file, char *output_file,
             case 'o':
                 (*SaveFile) = true;
                 strcpy(output_file, optarg);
-                printf("Output Board file %s.\n", optarg);
+                if(rank == 0) printf("Output Board file %s.\n", optarg);
                 break;
             case 'w':
                 (*col_num) = atoi(optarg);
-                printf("Board width %d.\n", (*col_num));
+                if(rank == 0) printf("Board width %d.\n", (*col_num));
                 break;
             case 'p':
                 (*PrintBoard) = true;
                 break;
             case 'h':
                 (*row_num) = atoi(optarg);
-                printf("Board height %d.\n", (*row_num));
+                if(rank == 0) printf("Board height %d.\n", (*row_num));
                 break;
             case 'e':
-                printf("End Time: %s.\n", optarg);
+                if(rank == 0) printf("End Time: %s.\n", optarg);
                 (*iterations) = atoi(optarg);
                 break;
             case 'H':
@@ -286,7 +286,6 @@ void free_neighbors(int col_num, unsigned char **neighbors) {
 }
 
 void init_board(board_t *board) {
-    printf("Initializing COL_NUM %d, ROW_NUM %d\n", board->COL_NUM, board->ROW_NUM);
     for (int i = 0; i < board->ROW_NUM; i++) {
         for (int j = 0; j < board->COL_NUM; j++) {
             board->cell_state[i][j] = 0;
@@ -303,7 +302,6 @@ void free_board(board_t *board) {
 }
 
 void allocate_board(board_t *board) {
-    printf("Allocating COL_NUM %d, ROW_NUM %d\n", board->COL_NUM, board->ROW_NUM);
     board->cell_state = (unsigned char **) malloc(sizeof(unsigned char *) * board->ROW_NUM);
     if (board->cell_state == NULL) {
         fprintf(stderr, "Error reserving board memory %lf KB",
