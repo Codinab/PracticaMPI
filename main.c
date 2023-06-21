@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     init_neighbors(col_num, local_row_num, neighbors);
 
     board_t *board_full_size = (board_t *) malloc(sizeof(board_t));
-    create_board(col_num, row_num, board_full_size);
+    if(rank == 0) create_board(col_num, row_num, board_full_size);
 
     MPI_Request send_request[board_full_size->ROW_NUM]; // A request for each MPI_Isend operation
     int request_count = 0; // A counter to keep track of how many requests we have
