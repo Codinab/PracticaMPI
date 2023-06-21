@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
     parse_arguments(rank, argc, argv, input_file, output_file, &LoadFile, &SaveFile, &PrintBoard, &iterations, &col_num,
                     &row_num);
 
-    if (size > row_num) {
+    if (rank == 0 && size > row_num) {
         if (rank == 0) { // Only master process outputs the error
             fprintf(stderr,
                     "Error: number of MPI processes cannot be more than number of rows per process in the grid.\n");
