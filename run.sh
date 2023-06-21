@@ -6,7 +6,12 @@ ulimit -s 10485760
 #ulimit -v 20000000
 
 
-mpirun -np 32 ./conway -e 10 -w 10000 -h 10000
+mpirun -np 10 ./conway -e 10 -w 1000 -h 1000
+
+
+#-i Ejemplos_LifeGame/4000x4000/LifeGame_4000x4000_iter0.txt
+
+
 #-i Ejemplos_LifeGame/100x100/LifeGame_100x100_iter0.txt
 
 

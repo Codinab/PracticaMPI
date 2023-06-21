@@ -17,7 +17,7 @@ void init_neighbors(int col_num, int row_num, unsigned char **neighbors);
 
 
 void parse_arguments(int argc, char **argv, char *input_file, char *output_file, bool *LoadFile, bool *SaveFile,
-                     int *iterations, int *col_num, int *row_num);
+                     bool *PrintBoard, int *iterations, int *col_num, int *row_num);
 
 void create_board(int col_num, int row_num, board_t *board);
 
@@ -30,6 +30,7 @@ void usage() {
     printf("\n -e\tNumber of simulation iterations.\n\n");
     printf("Enter extremely low values at own peril.\n\tRecommended to stay in 30000-100000 range.\n\tDefaults to 50000.\n\n");
     printf("\n -c\tSet cell size to tiny, small, medium or large.\n\tDefaults to small.\n\n");
+    printf("\n -p\tPrint board to console.\n\n");
 }
 
 int main(int argc, char **argv) {
@@ -42,7 +43,7 @@ int main(int argc, char **argv) {
 
     printf("Process %d of %d generated\n", rank, size);
 
-    bool LoadFile = false, SaveFile = false;
+    bool LoadFile = false, SaveFile = false, PrintBoard = false;
     int iterations = -1;
     char input_file[256], output_file[256];
 
@@ -50,11 +51,13 @@ int main(int argc, char **argv) {
     int row_num = D_ROW_NUM;
 
     // Command line options.
-    parse_arguments(argc, argv, input_file, output_file, &LoadFile, &SaveFile, &iterations, &col_num, &row_num);
+    parse_arguments(argc, argv, input_file, output_file, &LoadFile, &SaveFile, &PrintBoard, &iterations, &col_num,
+                    &row_num);
 
     if (size > row_num) {
         if (rank == 0) { // Only master process outputs the error
-            fprintf(stderr, "Error: number of MPI processes cannot be more than number of rows per process in the grid.\n");
+            fprintf(stderr,
+                    "Error: number of MPI processes cannot be more than number of rows per process in the grid.\n");
         }
         MPI_Finalize();
         return EXIT_FAILURE;
@@ -100,6 +103,8 @@ int main(int argc, char **argv) {
             life_init(board_full_size, prob, &seed);
         }
 
+        if(PrintBoard) print_board(board_full_size);
+
         int destRank = 0;
         int sendcounts[size];
 
@@ -121,16 +126,15 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("Rank %d\n", rank);
     {
 
-    MPI_Request recv_request[board->ROW_NUM]; // A request for each MPI_Irecv operation
-    int recv_count = 0;
+        MPI_Request recv_request[board->ROW_NUM]; // A request for each MPI_Irecv operation
+        int recv_count = 0;
 
-    for (int i = 0; i < board->ROW_NUM; i++) {
-        MPI_Irecv(board->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD,
-                  &recv_request[recv_count++]);
-    }
+        for (int i = 0; i < board->ROW_NUM; i++) {
+            MPI_Irecv(board->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD,
+                      &recv_request[recv_count++]);
+        }
 
 
         // create arrays to hold the status of the operations
@@ -180,21 +184,18 @@ int main(int argc, char **argv) {
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
             recvCounts[recvRank]--;
-            printf("recvCounts[%d] = %d\n", recvRank, recvCounts[recvRank]);
             if (recvCounts[recvRank] <= 0) recvRank++;
-            printf("destRank %d\n", recvRank);
         }
 
-        print_board(board_full_size);
+        if(PrintBoard) print_board(board_full_size);
 
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    exit(0);
 
     if (rank == 0) {
-        free_board(board);
+        free_board(board_full_size);
     }
 
     free_board(board);
@@ -219,9 +220,10 @@ void create_board(int col_num, int row_num, board_t *board) {
 }
 
 void parse_arguments(int argc, char **argv, char *input_file, char *output_file, bool *LoadFile, bool *SaveFile,
+                     bool *PrintBoard,
                      int *iterations, int *col_num, int *row_num) {
     int opt;
-    while ((opt = getopt(argc, argv, ":h:i:o:w:H:e:")) != -1) {
+    while ((opt = getopt(argc, argv, ":h:i:o:w:H:e:p:")) != -1) {
         switch (opt) {
             case 'i':
                 strcpy(input_file, optarg);
@@ -235,6 +237,9 @@ void parse_arguments(int argc, char **argv, char *input_file, char *output_file,
             case 'w':
                 (*col_num) = atoi(optarg);
                 printf("Board width %d.\n", (*col_num));
+                break;
+            case 'p':
+                (*PrintBoard) = true;
                 break;
             case 'h':
                 (*row_num) = atoi(optarg);
@@ -277,9 +282,6 @@ void init_neighbors(int col_num, int row_num, unsigned char **neighbors) {
 }
 
 void free_neighbors(int col_num, unsigned char **neighbors) {
-    for (int i = 0; i < col_num; i++) {
-        free(neighbors[i]);
-    }
     free(neighbors);
 }
 
@@ -297,12 +299,6 @@ void init_board(board_t *board) {
 }
 
 void free_board(board_t *board) {
-    for (int i = 0; i < board->COL_NUM; i++) {
-        free(board->cell_state[i]);
-    }
-    free(board->ghost_cell_state[0]);
-    free(board->ghost_cell_state[1]);
-    free(board->cell_state);
     free(board);
 }
 
