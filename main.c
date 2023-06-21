@@ -77,6 +77,10 @@ int main(int argc, char **argv) {
     MPI_Request send_request[2 * size + 4]; // A request for each MPI_Isend operation
     int request_count = 0; // A counter to keep track of how many requests we have
 
+    printf("Rank1 %d\n", rank);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
     if (rank == 0) {
 
         if (LoadFile) {
@@ -115,19 +119,24 @@ int main(int argc, char **argv) {
             if (!first_ghost_row && destRank != 0 && destRank != size - 1) {
                 MPI_Isend(board_full_size->cell_state[i - 1], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 1, MPI_COMM_WORLD, &send_request[request_count++]);
                 first_ghost_row = true;
+                printf("Rank %d: Sending first ghost row to %d\n", rank, destRank);
             }
             sendcounts[destRank]--;
             if (sendcounts[destRank] <= 0) {
 
                 // Sending next ghost row
-                if (!first_ghost_row && destRank != 0 && destRank != size - 1)
+                if (destRank != 0 && destRank != size - 1)
                     MPI_Isend(board_full_size->cell_state[i + 1], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 2, MPI_COMM_WORLD, &send_request[request_count++]);
 
                 destRank++;
-                first_ghost_row = true;
+                first_ghost_row = false;
             }
         }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    printf("Rank %d\n", rank);
 
     MPI_Request recv_request[2 + board->ROW_NUM]; // A request for each MPI_Irecv operation
     int recv_count = 0; // A counter to keep track of how many requests we have
@@ -140,9 +149,12 @@ int main(int argc, char **argv) {
     MPI_Irecv(board->ghost_cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 2, MPI_COMM_WORLD, &recv_request[recv_count++]);
 
     // create arrays to hold the status of the operations
-    //MPI_Status send_status[request_count];
+    MPI_Status send_status[request_count];
     MPI_Status recv_status[recv_count];
 
+    printf("Rank %d: Waiting for all rows\n", rank);
+
+    if (rank == 0) MPI_Waitall(request_count, send_request, send_status);
     MPI_Waitall(recv_count, recv_request, recv_status);
     printf("Rank %d: Received all rows\n", rank);
 
@@ -158,19 +170,21 @@ int main(int argc, char **argv) {
         fflush(stdout);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+
     if (rank == 0) printf("\nEnd Simulation.\n");
 
-
+    printf("Rank %d: Sending final board\n", rank);
     MPI_Finalize();
-    return 0;
+    //TODO: NO ARRIBA, ES BLOQUEJA EN EL WHILE DE DALT
+    return EXIT_SUCCESS;
+
     if (rank == 0 && SaveFile) {
         printf("Writing Board file %s.\n", output_file);
         fflush(stdout);
         life_write(output_file, board);
     }
 
-
+    //TODO: RECOLECTAR LOS BOARDS DE CADA PROCESO EN EL PROCESO PRINCIPAL (RANK 0)
     //Recolectar los board->cell_state de cada proceso en el proceso principal (rank 0)
     //MPI_Gatherv(board->cell_state, sendcounts[rank] * board->COL_NUM, MPI_INT,
     //            board_full_size->cell_state, sendcounts, displs, MPI_INT,
