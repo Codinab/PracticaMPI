@@ -41,6 +41,12 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    if (size == 1) {
+        fprintf(stderr, "Error: number of MPI processes cannot be 1\n");
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
+
     printf("Process %d of %d generated\n", rank, size);
 
     bool LoadFile = false, SaveFile = false, PrintBoard = false;
