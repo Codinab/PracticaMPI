@@ -32,11 +32,13 @@ void receive_rows(board_t *board, unsigned char **pString, int previousRank, int
               &requests[(*request_count)++]);
 
     // Initiate receiving the next rank's first row
-    MPI_Irecv(board->ghost_cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, nextRank, 1, MPI_COMM_WORLD, &requests[(*request_count)++]);
+    MPI_Irecv(board->ghost_cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, nextRank, 1, MPI_COMM_WORLD,
+              &requests[(*request_count)++]);
+
 }
 
 
-void count_neighbors_toroidal_world(board_t *board, unsigned char **neighbors) {
+void count_neighbors_toroidal_world(board_t *board, unsigned char **neighbors, const int *request_count, MPI_Request *requests, MPI_Status *statuses) {
     int i_prev, i_next, j_prev, j_next;
 
     // Clear neighbors
