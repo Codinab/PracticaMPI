@@ -12,12 +12,16 @@
 //#define GRAPHICAL_MODE
 
 typedef struct {
-  unsigned char cell_state[D_COL_NUM][D_ROW_NUM];
+  unsigned char **cell_state;
   int game_state;
   int COL_NUM;
-  int ROW_NUM;  
-  int CELL_WIDTH;
-  int CELL_HEIGHT;
+  int ROW_NUM;
 } board_t;
+
+void allocate_board(board_t* board);
+
+void free_board(board_t* board);
+
+void init_board(board_t *board);
 
 #endif // GAME_H_

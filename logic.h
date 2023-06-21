@@ -1,10 +1,10 @@
-void count_neighbors(board_t* board, unsigned char neighbors[D_COL_NUM][D_ROW_NUM]);
+void count_neighbors(board_t* board, unsigned char** neighbors);
 
-void count_neighbors_spherical_world(board_t* board, unsigned char neighbors[D_COL_NUM][D_ROW_NUM]);
+void count_neighbors_spherical_world(board_t* board, unsigned char** neighbors);
 
-void count_neighbors_flat_world(board_t* board, unsigned char neighbors[D_COL_NUM][D_ROW_NUM]);
+void count_neighbors_flat_world(board_t* board, unsigned char** neighbors);
 
-void evolve(board_t* board, const unsigned char neighbors[D_COL_NUM][D_ROW_NUM]);
+void evolve(board_t* board, unsigned char** neighbors);
 
 void life_read ( char *filename, board_t* board);
 
