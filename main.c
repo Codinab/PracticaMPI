@@ -52,6 +52,15 @@ int main(int argc, char **argv) {
     // Command line options.
     parse_arguments(argc, argv, input_file, output_file, &LoadFile, &SaveFile, &iterations, &col_num, &row_num);
 
+    if (size > row_num) {
+        if (rank == 0) { // Only master process outputs the error
+            fprintf(stderr, "Error: number of MPI processes cannot be more than number of rows per process in the grid.\n");
+        }
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
+
+
     // Calculate the number of rows each process should handle.
     int rows_for_process = row_num / size;
     int remainder = row_num % size;
@@ -66,18 +75,14 @@ int main(int argc, char **argv) {
     board_t *board = (board_t *) malloc(sizeof(board_t));
     create_board(col_num, local_row_num, board);
 
-    //printf("Rank %d: COL_NUM = %d, ROW_NUM = %d, Total ROW_NUM = %d\n", rank, board->COL_NUM, board->ROW_NUM, row_num);
-
     unsigned char **neighbors = malloc(local_row_num * sizeof(unsigned char *));
     init_neighbors(col_num, local_row_num, neighbors);
 
     board_t *board_full_size = (board_t *) malloc(sizeof(board_t));
     create_board(col_num, row_num, board_full_size);
 
-    MPI_Request send_request[2 * size + 4]; // A request for each MPI_Isend operation
+    MPI_Request send_request[board_full_size->ROW_NUM]; // A request for each MPI_Isend operation
     int request_count = 0; // A counter to keep track of how many requests we have
-
-    printf("Rank1 %d\n", rank);
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -106,61 +111,26 @@ int main(int argc, char **argv) {
             recvCounts[i] = sendcounts[i];
         }
 
-        // Using non-blocking sends
-        MPI_Isend(board_full_size->cell_state[board_full_size->ROW_NUM - 1], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 1,
-                  MPI_COMM_WORLD, &send_request[request_count++]);
-        MPI_Isend(board_full_size->cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 2, MPI_COMM_WORLD,
-                  &send_request[request_count++]);
 
-        MPI_Isend(board_full_size->cell_state[(size - 2 < 0) ? 0 : size - 2], board->COL_NUM, MPI_UNSIGNED_CHAR,
-                  size - 1, 1, MPI_COMM_WORLD, &send_request[request_count++]);
-        MPI_Isend(board_full_size->cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, size - 1, 2, MPI_COMM_WORLD,
-                  &send_request[request_count++]);
-
-        bool first_ghost_row = false;
         for (int i = 0; i < board_full_size->ROW_NUM; i++) {
             MPI_Isend(board_full_size->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 0, MPI_COMM_WORLD,
                       &send_request[request_count++]);
 
-            // Sending previous ghost row
-            if (!first_ghost_row && destRank != 0 && destRank != size - 1) {
-                MPI_Isend(board_full_size->cell_state[i - 1], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 1,
-                          MPI_COMM_WORLD, &send_request[request_count++]);
-                first_ghost_row = true;
-                printf("Rank %d: Sending first ghost row to %d\n", rank, destRank);
-            }
             sendcounts[destRank]--;
-            if (sendcounts[destRank] <= 0) {
-
-                // Sending next ghost row
-                if (destRank != 0 && destRank != size - 1)
-                    MPI_Isend(board_full_size->cell_state[i + 1], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 2,
-                              MPI_COMM_WORLD, &send_request[request_count++]);
-
-                destRank++;
-                first_ghost_row = false;
-            }
+            if (sendcounts[destRank] <= 0) destRank++;
         }
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
 
     printf("Rank %d\n", rank);
     {
 
-    MPI_Request recv_request[2 + board->ROW_NUM]; // A request for each MPI_Irecv operation
-    int recv_count = 0; // A counter to keep track of how many requests we have
+    MPI_Request recv_request[board->ROW_NUM]; // A request for each MPI_Irecv operation
+    int recv_count = 0;
 
     for (int i = 0; i < board->ROW_NUM; i++) {
         MPI_Irecv(board->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD,
                   &recv_request[recv_count++]);
     }
-
-    MPI_Irecv(board->ghost_cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 1, MPI_COMM_WORLD,
-              &recv_request[recv_count++]);
-    MPI_Irecv(board->ghost_cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 2, MPI_COMM_WORLD,
-              &recv_request[recv_count++]);
-
 
 
         // create arrays to hold the status of the operations
