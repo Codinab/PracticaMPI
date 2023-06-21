@@ -165,27 +165,18 @@ int main(int argc, char **argv) {
     int Iteration = 0;
     while ((iterations < 0 || Iteration < iterations) != 0) {
         render_board(board, neighbors, rank == 0 ? size-1 : rank-1, rank == size-1 ? 0 : rank+1);
-        //printf("Rank %d: Rendering board in iteration %d \n", rank, Iteration);
         MPI_Barrier(MPI_COMM_WORLD);  // Synchronize all processes here
-        //printf("Rank %d: Barrier passed in iteration %d \n", rank, Iteration);
-
         Iteration++;
         if (rank == 0) {
             print_board(board);
             printf("[%05d] Life Game Simulation step.\n", Iteration);
             fflush(stdout);
         }
-
-        //printf("Rank %d: Iteration %d\n", rank, Iteration);
     }
 
     if (rank == 0) printf("\nEnd Simulation.\n");
 
-    //printf("Rank %d: Sending final board\n", rank);
-    return EXIT_SUCCESS;
-    //MPI_Finalize();
 
-    //TODO: NO ARRIBA, ES BLOQUEJA EN EL WHILE DE DALT
 
     if (rank == 0 && SaveFile) {
         printf("Writing Board file %s.\n", output_file);
@@ -194,32 +185,40 @@ int main(int argc, char **argv) {
     }
     //TODO: RECOLECTAR LOS BOARDS DE CADA PROCESO EN EL PROCESO PRINCIPAL (RANK 0)
 
-    board_t *full_board = NULL;
-
-    if (rank == 0) {
-        full_board = (board_t *)malloc(sizeof(board_t));
-        create_board(col_num, row_num, full_board);
+    for(int i = 0; i < board->ROW_NUM; i++) {
+        MPI_Isend(board->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 3, MPI_COMM_WORLD, NULL);
     }
-    printf("all gathered\n");
-    return EXIT_SUCCESS;
-    // Gather all the local boards into the full_board on rank 0
-    MPI_Gather(board->cell_state[0], board->COL_NUM * board->ROW_NUM, MPI_UNSIGNED_CHAR,
-               full_board->cell_state[0], board->COL_NUM * board->ROW_NUM, MPI_UNSIGNED_CHAR,
-               0, MPI_COMM_WORLD);
 
-    printf("all gathered\n");
-    return EXIT_SUCCESS;
     if (rank == 0) {
 
+        int destRank = 0;
+        int sendcounts[size];
 
-        // Ejemplo: Imprimir el board completo
-        for (int i = 0; i < row_num; i++) {
-            for (int j = 0; j < col_num; j++) {
-                printf("%d ", board_full_size->cell_state[i][j]);
+        for (int i = 0; i < size; i++) {
+            sendcounts[i] = rows_for_process;
+            if (i < remainder) {
+                sendcounts[i]++;
             }
-            printf("\n");
         }
+
+
+        MPI_Request recv_request[board_full_size->ROW_NUM];
+        MPI_Status recv_status[board_full_size->ROW_NUM];
+
+        for (int i = 0; i < size; i++) {
+            MPI_Irecv(board_full_size->cell_state[i], board->COL_NUM * board->ROW_NUM, MPI_UNSIGNED_CHAR, destRank, 3, MPI_COMM_WORLD, &recv_request[i]);
+
+            sendcounts[destRank]--;
+            if (sendcounts[destRank] <= 0) destRank++;
+        }
+
+        MPI_Waitall(size, recv_request, recv_status);
+
+
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
 
 
     if (rank == 0) {
