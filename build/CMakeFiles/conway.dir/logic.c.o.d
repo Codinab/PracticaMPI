@@ -25,6 +25,14 @@ CMakeFiles/conway.dir/logic.c.o: \
  /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
  /home/alex/Documentos/Uni/CDA/gol_nosdl/./game.h \
  /home/alex/Documentos/Uni/CDA/gol_nosdl/./logic.h \
+ /usr/include/x86_64-linux-gnu/mpich/mpi.h \
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h /usr/include/stdint.h \
+ /usr/include/x86_64-linux-gnu/bits/wchar.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+ /usr/include/x86_64-linux-gnu/mpich/mpi_proto.h \
+ /usr/include/x86_64-linux-gnu/mpich/mpio.h \
+ /usr/include/x86_64-linux-gnu/mpich/mpi.h \
  /home/alex/Documentos/Uni/CDA/gol_nosdl/./render.h \
  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdbool.h /usr/include/stdlib.h \
  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
@@ -33,8 +41,7 @@ CMakeFiles/conway.dir/logic.c.o: \
  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
- /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
- /usr/include/x86_64-linux-gnu/bits/stdint-intn.h /usr/include/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/types/timer_t.h /usr/include/endian.h \
  /usr/include/x86_64-linux-gnu/bits/endian.h \
  /usr/include/x86_64-linux-gnu/bits/endianness.h \
  /usr/include/x86_64-linux-gnu/bits/byteswap.h \
@@ -51,14 +58,7 @@ CMakeFiles/conway.dir/logic.c.o: \
  /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h /usr/include/alloca.h \
- /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
- /usr/include/x86_64-linux-gnu/mpich/mpi.h \
- /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h /usr/include/stdint.h \
- /usr/include/x86_64-linux-gnu/bits/wchar.h \
- /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
- /usr/include/x86_64-linux-gnu/mpich/mpi_proto.h \
- /usr/include/x86_64-linux-gnu/mpich/mpio.h \
- /usr/include/x86_64-linux-gnu/mpich/mpi.h /usr/include/unistd.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-float.h /usr/include/unistd.h \
  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
  /usr/include/x86_64-linux-gnu/bits/environments.h \
  /usr/include/x86_64-linux-gnu/bits/confname.h \

@@ -13,17 +13,19 @@ void receive_rows(board_t *board, unsigned char **pString, int previousRank, int
                   int *request_count);
 
 void render_board(board_t *board, unsigned char **neighbors, int previousRank, int nextRank) {
-    MPI_Request requests[4];
-    MPI_Status statuses[4];
+    MPI_Request requests[2];
+    MPI_Status statuses[2];
     int request_count = 0;
+
+    MPI_Request requests_ignore[2];
+    int request_count_ignore = 0;
 
     switch (board->game_state) {
         case RUNNING_STATE:
             //print_board(board);
-            count_neighbors(board, neighbors);
             receive_rows(board, neighbors, previousRank, nextRank, requests, &request_count);
-            send_rows(board, neighbors, previousRank, nextRank, requests, &request_count);
-            MPI_Waitall(request_count, requests, statuses);
+            send_rows(board, neighbors, previousRank, nextRank, requests_ignore, &request_count_ignore);
+            count_neighbors(board, neighbors, &request_count, requests, statuses);
             evolve(board, neighbors);
             break;
         case PAUSE_STATE:

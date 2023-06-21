@@ -7,23 +7,29 @@
 #include <mpi.h>
 #include <unistd.h>
 
-void count_neighbors(board_t *board, unsigned char **neighbors) {
-    count_neighbors_toroidal_world(board, neighbors);
+void count_neighbors(board_t *board, unsigned char **neighbors, int *request_count, MPI_Request *requests,
+                     MPI_Status *statuses) {
+    count_neighbors_toroidal_world(board, neighbors, request_count, requests, statuses);
 }
 
-void send_rows(board_t *board, unsigned char **pString, int previousRank, int nextRank, MPI_Request* requests, int* request_count) {
+void send_rows(board_t *board, unsigned char **pString, int previousRank, int nextRank, MPI_Request *requests,
+               int *request_count) {
 
     // Initiate sending the first row to the previous rank
-    MPI_Isend(board->cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, previousRank, 1, MPI_COMM_WORLD, &requests[(*request_count)++]);
+    MPI_Isend(board->cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, previousRank, 1, MPI_COMM_WORLD,
+              &requests[(*request_count)++]);
 
     // Initiate sending the last row to the next rank
-    MPI_Isend(board->cell_state[board->ROW_NUM - 1], board->COL_NUM, MPI_UNSIGNED_CHAR, nextRank, 2, MPI_COMM_WORLD, &requests[(*request_count)++]);
+    MPI_Isend(board->cell_state[board->ROW_NUM - 1], board->COL_NUM, MPI_UNSIGNED_CHAR, nextRank, 2, MPI_COMM_WORLD,
+              &requests[(*request_count)++]);
 }
 
-void receive_rows(board_t *board, unsigned char **pString, int previousRank, int nextRank, MPI_Request* requests, int* request_count) {
+void receive_rows(board_t *board, unsigned char **pString, int previousRank, int nextRank, MPI_Request *requests,
+                  int *request_count) {
 
     // Initiate receiving the previous rank's last row
-    MPI_Irecv(board->ghost_cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, previousRank, 2, MPI_COMM_WORLD, &requests[(*request_count)++]);
+    MPI_Irecv(board->ghost_cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, previousRank, 2, MPI_COMM_WORLD,
+              &requests[(*request_count)++]);
 
     // Initiate receiving the next rank's first row
     MPI_Irecv(board->ghost_cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, nextRank, 1, MPI_COMM_WORLD, &requests[(*request_count)++]);
@@ -41,41 +47,55 @@ void count_neighbors_toroidal_world(board_t *board, unsigned char **neighbors) {
     }
 
     // Inner cells
-    for (int i = 0; i < board->ROW_NUM; i++) {
+    for (int i = 1; i < board->ROW_NUM - 1; i++) { // Changed loop start and end to exclude first and last rows
         for (int j = 0; j < board->COL_NUM; j++) {
-            i_prev = (i > 0) ? i - 1 : board->ROW_NUM - 1; // The previous cell in the column
-            i_next = (i < (board->ROW_NUM - 1)) ? i + 1 : 0; // The next cell in the column
+            i_prev = i - 1;
+            i_next = i + 1;
             j_prev = (j > 0) ? j - 1 : board->COL_NUM - 1; // The previous cell in the row
             j_next = (j < (board->COL_NUM - 1)) ? j + 1 : 0; // The next cell in the row
 
-            // check each neighbor
-            // top left
-            neighbors[i][j] += (i > 0 && j > 0) ? board->cell_state[i_prev][j_prev] == ALIVE : board->ghost_cell_state[0][j_prev] == ALIVE;
-
-            // top
-            neighbors[i][j] += (i > 0) ? board->cell_state[i_prev][j] == ALIVE : board->ghost_cell_state[0][j] == ALIVE;
-
-            // top right
-            neighbors[i][j] += (i > 0 && j < board->COL_NUM - 1) ? board->cell_state[i_prev][j_next] == ALIVE : board->ghost_cell_state[0][j_next] == ALIVE;
-
-            // left
-            neighbors[i][j] += (j > 0) ? board->cell_state[i][j_prev] == ALIVE : board->ghost_cell_state[1][j_prev] == ALIVE;
-
-            // right
-            neighbors[i][j] += (j < board->COL_NUM - 1) ? board->cell_state[i][j_next] == ALIVE : board->ghost_cell_state[1][j_next] == ALIVE;
-
-            // bottom left
-            neighbors[i][j] += (i < board->ROW_NUM - 1 && j > 0) ? board->cell_state[i_next][j_prev] == ALIVE : board->ghost_cell_state[0][j_prev] == ALIVE;
-
-            // bottom
-            neighbors[i][j] += (i < board->ROW_NUM - 1) ? board->cell_state[i_next][j] == ALIVE : board->ghost_cell_state[0][j] == ALIVE;
-
-            // bottom right
-            neighbors[i][j] += (i < board->ROW_NUM - 1 && j < board->COL_NUM - 1) ? board->cell_state[i_next][j_next] == ALIVE : board->ghost_cell_state[0][j_next] == ALIVE;
+            // calculate neighbors for the internal cells using only the board->cell_state array
+            neighbors[i][j] = board->cell_state[i_prev][j_prev] +   // Top left
+                              board->cell_state[i_prev][j] +        // Top
+                              board->cell_state[i_prev][j_next] +   // Top right
+                              board->cell_state[i][j_prev] +        // Left
+                              board->cell_state[i][j_next] +        // Right
+                              board->cell_state[i_next][j_prev] +   // Bottom left
+                              board->cell_state[i_next][j] +        // Bottom
+                              board->cell_state[i_next][j_next];    // Bottom right
         }
     }
-}
 
+    // If received ghost cells, calculate neighbors for them
+    MPI_Waitall(*request_count, requests, statuses);
+
+    // Outer cells (first and last rows)
+    for (int j = 0; j < board->COL_NUM; j++) {
+        j_prev = (j > 0) ? j - 1 : board->COL_NUM - 1; // The previous cell in the row
+        j_next = (j < (board->COL_NUM - 1)) ? j + 1 : 0; // The next cell in the row
+
+        // First row
+        neighbors[0][j] = board->ghost_cell_state[0][j_prev] +      // Top left
+                          board->ghost_cell_state[0][j] +           // Top
+                          board->ghost_cell_state[0][j_next] +      // Top right
+                          board->cell_state[0][j_prev] +            // Left
+                          board->cell_state[0][j_next] +            // Right
+                          board->cell_state[1][j_prev] +            // Bottom left
+                          board->cell_state[1][j] +                 // Bottom
+                          board->cell_state[1][j_next];             // Bottom right
+
+        // Last row
+        int last = board->ROW_NUM - 1;
+        neighbors[last][j] = board->cell_state[last - 1][j_prev] +  // Top left
+                             board->cell_state[last - 1][j] +       // Top
+                             board->cell_state[last - 1][j_next] +  // Top right
+                             board->cell_state[last][j_prev] +      // Left
+                             board->cell_state[last][j_next] +      // Right
+                             board->ghost_cell_state[1][j_prev] +   // Bottom left
+                             board->ghost_cell_state[1][j] +        // Bottom
+                             board->ghost_cell_state[1][j_next];    // Bottom right
+    }
+}
 
 
 
@@ -277,7 +297,7 @@ void count_neighbors_flat_world(board_t *board, unsigned char **neighbors) {
 
 void evolve(board_t *board, unsigned char **neighbors) {
     for (int i = 0; i < board->ROW_NUM; i++) {
-        for (int j = 0; j < board-> COL_NUM; j++) {
+        for (int j = 0; j < board->COL_NUM; j++) {
             // underopulation case
             if (neighbors[i][j] < 2) {
                 board->cell_state[i][j] = DEAD;
