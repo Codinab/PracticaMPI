@@ -6,30 +6,35 @@
 #include "./logic.h"
 
 
-void receive_first_row(board_t *board, unsigned char **pString, int neighborRank);
-void send_last_row(board_t *board, unsigned char **pString, int neighborRank);
+void send_rows(board_t *board, unsigned char **pString, int previousRank, int nextRank, MPI_Request *requests,
+               int *request_count);
 
-void render_board(board_t* board, unsigned char** neighbors, int neighborRank)
-{
-    count_neighbors(board, neighbors);
-    return;
-    switch(board->game_state) {
+void receive_rows(board_t *board, unsigned char **pString, int previousRank, int nextRank, MPI_Request *requests,
+                  int *request_count);
+
+void render_board(board_t *board, unsigned char **neighbors, int previousRank, int nextRank) {
+    MPI_Request requests[4];
+    MPI_Status statuses[4];
+    int request_count = 0;
+
+    switch (board->game_state) {
         case RUNNING_STATE:
             //print_board(board);
             count_neighbors(board, neighbors);
-            send_last_row(board, neighbors, neighborRank);
-            receive_first_row(board, neighbors, neighborRank);
+            receive_rows(board, neighbors, previousRank, nextRank, requests, &request_count);
+            send_rows(board, neighbors, previousRank, nextRank, requests, &request_count);
+            MPI_Waitall(request_count, requests, statuses);
             evolve(board, neighbors);
             break;
         case PAUSE_STATE:
             break;
-        default: {}
+        default: {
+        }
     }
 }
 
 
-void print_board(board_t* board)
-{
+void print_board(board_t *board) {
     printf("\n");
     for (int i = 0; i < board->ROW_NUM; i++) {
         for (int j = 0; j < board->COL_NUM; j++) {

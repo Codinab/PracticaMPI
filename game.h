@@ -13,6 +13,7 @@
 
 typedef struct {
   unsigned char **cell_state;
+  unsigned char *ghost_cell_state[2];
   int game_state;
   int COL_NUM;
   int ROW_NUM;

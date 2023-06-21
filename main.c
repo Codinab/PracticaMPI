@@ -68,8 +68,8 @@ int main(int argc, char **argv) {
 
     //printf("Rank %d: COL_NUM = %d, ROW_NUM = %d, Total ROW_NUM = %d\n", rank, board->COL_NUM, board->ROW_NUM, row_num);
 
-    unsigned char **neighbors = malloc((local_row_num + 2) * sizeof(unsigned char *));
-    init_neighbors(col_num, (local_row_num + 2), neighbors);
+    unsigned char **neighbors = malloc(local_row_num * sizeof(unsigned char *));
+    init_neighbors(col_num, local_row_num, neighbors);
 
     board_t *board_full_size = (board_t *) malloc(sizeof(board_t));
     create_board(col_num, row_num, board_full_size);
@@ -98,44 +98,83 @@ int main(int argc, char **argv) {
             }
         }
 
+        // Sending ghost rows to process 0
+        // Sending last row (previous)
+        MPI_Send(board_full_size->cell_state[board_full_size->ROW_NUM - 1], board->COL_NUM, MPI_UNSIGNED_CHAR,
+                 0, 1, MPI_COMM_WORLD);
+        // Sending second row (next)
+        MPI_Send(board_full_size->cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 2, MPI_COMM_WORLD);
+
+
+        // Sending ghost rows to process size - 1
+        // Sending row before last row (previous)
+        MPI_Send(board_full_size->cell_state[(size - 2 < 0) ? 0 : size - 2], board->COL_NUM, MPI_UNSIGNED_CHAR,
+                 size - 1, 1,
+                 MPI_COMM_WORLD);
+
+        // Sending first row (next)
+        MPI_Send(board_full_size->cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, size - 1, 2, MPI_COMM_WORLD);
+
+        bool first_ghost_row = false;
         for (int i = 0; i < board_full_size->ROW_NUM; i++) {
             MPI_Send(board_full_size->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 0, MPI_COMM_WORLD);
+
+            // Sending previous ghost row
+            if (!first_ghost_row && destRank != 0 && destRank != size - 1) {
+                MPI_Send(board_full_size->cell_state[i - 1], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 1,
+                         MPI_COMM_WORLD);
+                first_ghost_row = true;
+            }
             sendcounts[destRank]--;
-            if(sendcounts[destRank] <= 0) {
+            if (sendcounts[destRank] <= 0) {
+
+                // Sending next ghost row
+                if (!first_ghost_row && destRank != 0 && destRank != size - 1)
+                    MPI_Send(board_full_size->cell_state[i + 1], board->COL_NUM, MPI_UNSIGNED_CHAR, destRank, 2,
+                             MPI_COMM_WORLD);
+
                 destRank++;
+                first_ghost_row = true;
             }
         }
+
+
     }
     for (int i = 0; i < board->ROW_NUM; i++) {
         MPI_Recv(board->cell_state[i], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
+    MPI_Recv(board->ghost_cell_state[0], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(board->ghost_cell_state[1], board->COL_NUM, MPI_UNSIGNED_CHAR, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
-    render_board(board, neighbors, rank == size-1 ? 0: rank+1);
-    exit(0);
-    printf("Start Simulation.\n");
+
+    if (rank == 0) printf("Start Simulation.\n");
     fflush(stdout);
     int Iteration = 0;
     while ((iterations < 0 || Iteration < iterations) != 0) {
-        //render_board(board, neighbors, rank == size-1 ? 0: rank+1);
-        printf("[%05d] Life Game Simulation step.\r", ++Iteration);
+        render_board(board, neighbors, rank == 0 ? size-1: rank-1, rank == size-1 ? 0: rank+1);
+        if (rank == 0) print_board(board);
+        if (rank == 0) printf("[%05d] Life Game Simulation step.\r", ++Iteration);
         fflush(stdout);
     }
 
-    printf("\nEnd Simulation.\n");
-
-    if (SaveFile) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) printf("\nEnd Simulation.\n");
+    MPI_Finalize();
+    return 0;
+    if (rank == 0 && SaveFile) {
         printf("Writing Board file %s.\n", output_file);
         fflush(stdout);
         life_write(output_file, board);
     }
 
-     //Recolectar los board->cell_state de cada proceso en el proceso principal (rank 0)
+
+    //Recolectar los board->cell_state de cada proceso en el proceso principal (rank 0)
     //MPI_Gatherv(board->cell_state, sendcounts[rank] * board->COL_NUM, MPI_INT,
     //            board_full_size->cell_state, sendcounts, displs, MPI_INT,
     //            0, MPI_COMM_WORLD);
     //
+
 
 
     if (rank == 0) {
@@ -156,7 +195,7 @@ int main(int argc, char **argv) {
     }
 
     free_board(board);
-    //free_neighbors(col_num, neighbors);
+    free_neighbors(col_num, neighbors);
 
     MPI_Finalize();
 
@@ -246,9 +285,11 @@ void init_board(board_t *board) {
     for (int i = 0; i < board->ROW_NUM; i++) {
         for (int j = 0; j < board->COL_NUM; j++) {
             board->cell_state[i][j] = 0;
-            //printf("%d ", board->cell_state[i][j]);
         }
-        //printf("\n");
+    }
+    for (int i = 0; i < board->COL_NUM; i++) {
+        board->ghost_cell_state[0][i] = 0;
+        board->ghost_cell_state[1][i] = 0;
     }
 }
 
@@ -256,6 +297,8 @@ void free_board(board_t *board) {
     for (int i = 0; i < board->COL_NUM; i++) {
         free(board->cell_state[i]);
     }
+    free(board->ghost_cell_state[0]);
+    free(board->ghost_cell_state[1]);
     free(board->cell_state);
     free(board);
 }
@@ -265,7 +308,8 @@ void allocate_board(board_t *board) {
     board->cell_state = (unsigned char **) malloc(sizeof(unsigned char *) * board->ROW_NUM);
     if (board->cell_state == NULL) {
         fprintf(stderr, "Error reserving board memory %lf KB",
-                sizeof(unsigned char *) * board->COL_NUM + sizeof(unsigned char) * board->ROW_NUM * board->ROW_NUM / 1024.0);
+                sizeof(unsigned char *) * board->COL_NUM +
+                sizeof(unsigned char) * board->ROW_NUM * board->ROW_NUM / 1024.0);
         exit(1);
     }
     for (int i = 0; i < board->ROW_NUM; i++) {
@@ -275,5 +319,8 @@ void allocate_board(board_t *board) {
             exit(1);
         }
     }
+
+    board->ghost_cell_state[0] = (unsigned char *) malloc(sizeof(unsigned char) * board->COL_NUM);
+    board->ghost_cell_state[1] = (unsigned char *) malloc(sizeof(unsigned char) * board->COL_NUM);
 }
 

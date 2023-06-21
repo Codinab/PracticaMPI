@@ -4,6 +4,8 @@ void count_neighbors_spherical_world(board_t* board, unsigned char** neighbors);
 
 void count_neighbors_flat_world(board_t* board, unsigned char** neighbors);
 
+void count_neighbors_toroidal_world(board_t *board, unsigned char **neighbors);
+
 void evolve(board_t* board, unsigned char** neighbors);
 
 void life_read ( char *filename, board_t* board);
